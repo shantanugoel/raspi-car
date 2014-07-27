@@ -1,0 +1,65 @@
+<html>
+  <head>
+    <title> Shantz Pi Bot </title>
+  </head>
+  <body>
+    <script src="../virtualjoystick.js"></script>
+
+    <script>
+      var ws = new WebSocket("ws://rpi:12345/");
+      var joystick = new VirtualJoystick({
+        mouseSupport    : true,
+        limitStickTravel: true,
+        stickRadius     : 120,
+      });
+
+      var joystick2 = new VirtualJoystick({
+        limitStickTravel: true,
+        stickRadius     : 120,
+      });
+
+      joystick.addEventListener('touchStartValidation', function(event){
+        var touch = event.changedTouches[0];
+        if( touch.pageX >= window.innerWidth/2 )  return false;
+        return true
+      });
+
+      joystick2.addEventListener('touchStartValidation', function(event){
+        var touch = event.changedTouches[0];
+        if( touch.pageX < window.innerWidth/2 )  return false;
+        return true
+      });
+
+      function controlBot() {
+        ws.send(Math.ceil(joystick.deltaX())
+        + ' ' + Math.ceil(joystick.deltaY())
+        + ' ' + Math.ceil(joystick2.deltaX())
+        + ' ' + Math.ceil(joystick2.deltaY())
+        );
+      }
+
+      setInterval(function(){
+        var outputEl  = document.getElementById('result');
+        outputEl.innerHTML  = '<b>Result:</b> <br /> Bot Motion: '
+        + ' dx:'+joystick.deltaX()
+        + ' dy:'+joystick.deltaY()
+        + (joystick.right() ? ' right'  : '')
+        + (joystick.up()  ? ' up'   : '')
+        + (joystick.left()  ? ' left' : '')
+        + (joystick.down()  ? ' down'   : '')
+        + '<br /> Camera Motion '
+        + ' dx:'+joystick2.deltaX()
+        + ' dy:'+joystick2.deltaY()
+        + (joystick2.right() ? ' right'  : '')
+        + (joystick2.up()  ? ' up'   : '')
+        + (joystick2.left()  ? ' left' : '')
+        + (joystick2.down()  ? ' down'   : '');
+        controlBot();
+      }, 1/5000);
+    </script>
+
+    <!-- Video -->
+    <center><img src="/?action=stream" /></center>
+    <span id="result"></span>
+  </body>
+</html>
