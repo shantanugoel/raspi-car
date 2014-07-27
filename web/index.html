@@ -10,12 +10,12 @@
       var joystick = new VirtualJoystick({
         mouseSupport    : true,
         limitStickTravel: true,
-        stickRadius     : 120,
+        stickRadius     : 255,
       });
 
       var joystick2 = new VirtualJoystick({
         limitStickTravel: true,
-        stickRadius     : 120,
+        stickRadius     : 255,
       });
 
       joystick.addEventListener('touchStartValidation', function(event){
@@ -55,7 +55,7 @@
         + (joystick2.left()  ? ' left' : '')
         + (joystick2.down()  ? ' down'   : '');
         controlBot();
-      }, 1/5000);
+      }, 1/10000);
     </script>
 
     <!-- Video -->
