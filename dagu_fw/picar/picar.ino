@@ -21,8 +21,9 @@
  * 1. Move:
  * Command ID: 01
  * Parameters: LMSpeed(1b) RMSpeed(1b) PanAngle(1b) TiltAngle(1b)
+ * End with a newline
  */
-#define MAXRCVSIZE 8
+#define MAXRCVSIZE 9
 
 #define CMD_ID_MOVE 01
 
@@ -32,7 +33,8 @@
 #define ERR_CMD_INVALID        3
 #define ERR_CMD_STRUCT_INVALID 4
 
-char rcvBuffer[MAXRCVSIZE] = {0};
+char rcvBuffer[MAXRCVSIZE] = {
+  0};
 
 typedef struct cmdMove_t
 {
@@ -45,11 +47,12 @@ typedef struct cmdMove_t
   uint8_t pad5;
   uint8_t  csum;
 
-}cmdMove_t;
+}
+cmdMove_t;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(57600);
   pinMode(LMDIRPIN, OUTPUT);
   pinMode(LMSPDPIN, OUTPUT);
   pinMode(RMDIRPIN, OUTPUT);
@@ -84,6 +87,8 @@ void flagError(int status)
 
 void sendAck(int status)
 {
+  Serial.print(status, DEC);
+  Serial.print(":");
   Serial.print(analogRead(BVMONPIN), DEC);
   Serial.print("\n");
   flagError(status);
@@ -91,15 +96,22 @@ void sendAck(int status)
 
 int verifyCommand(int numBytes)
 {
-  int i = 0, csum = 0;
+  int i = 0, csumtemp = 0;
+  int8_t csum = 0;
   int ret = ERR_SUCCESS;
-  for (i = 0 ; i < numBytes - 2; ++i)
+  Serial.print("CSUM: ");
+  for (i = 0 ; i < numBytes - 1; ++i)
   {
-    csum += rcvBuffer[i];
+    csumtemp += rcvBuffer[i];
   }
-  csum = ~csum;
+  Serial.print(csumtemp, DEC);
+  csum = ~csumtemp & 0xFF;
+  Serial.print(" ");
+  Serial.print(csum);
+  Serial.print("||");
   if(csum != rcvBuffer[numBytes - 1])
   {
+    Serial.print(csum, DEC);
     ret = ERR_CMD_VERIF_FAILED;
   }
   return ret;
@@ -126,9 +138,9 @@ int processCommand(int numBytes)
   int ret = ERR_CMD_INVALID;
   switch(rcvBuffer[0])
   {
-    case CMD_ID_MOVE:
-      ret = processMoveCommand(numBytes);
-      break;
+  case CMD_ID_MOVE:
+    ret = processMoveCommand(numBytes);
+    break;
   }
   return ret;
 }
@@ -143,27 +155,46 @@ int receiveCommand()
     numBytes = Serial.available();
     if (numBytes > 0)
     {
-      break;
+      for(; numBytes > 0; --numBytes)
+      {
+        rcvBuffer[i] = Serial.read();
+        if('\n' == rcvBuffer[i])
+        {
+          break;
+        } 
+        Serial.print(i, DEC);
+        Serial.print(" : ");
+        Serial.print(rcvBuffer[i], DEC);
+        Serial.print("==");
+        ++i;
+      }
+      if('\n' == rcvBuffer[i])
+      {
+        Serial.print("start ver");
+        break;
+      } 
+      else if (i < MAXRCVSIZE)
+      {
+        continue;
+      }
+      else
+      {
+        ret = ERR_TOO_MANY_BYTES;
+        break;
+      }
     }
-  } while(1);
+  } 
+  while(1);
 
-  if (MAXRCVSIZE >= numBytes)
+  if(ERR_SUCCESS == ret)
   {
-    for(i = 0; i < numBytes; ++i)
-    {
-      rcvBuffer[i] = Serial.read();
-    }
-
-    ret = verifyCommand(numBytes);
-
-    if(ERR_SUCCESS == ret)
-    {
-      ret = processCommand(numBytes);
-    }
+    Serial.print("ver");
+    ret = verifyCommand(i);
   }
-  else
+  if(ERR_SUCCESS == ret)
   {
-    ret = ERR_TOO_MANY_BYTES;
+    Serial.print("proc");
+    ret = processCommand(i);
   }
 
   return ret;
@@ -173,3 +204,10 @@ void loop()
 {
   sendAck(receiveCommand());
 }
+
+
+
+
+
+
+
