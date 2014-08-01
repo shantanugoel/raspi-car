@@ -1,3 +1,5 @@
+#include "Servo.h"
+
 #define LMDIRPIN 7
 #define LMSPDPIN 9
 #define RMDIRPIN 8
@@ -12,6 +14,15 @@
 
 #define MINRSPEED -255
 #define MAXRSPEED 255
+
+
+#define PANSERVOPIN  2
+#define TILTSERVOPIN 3
+
+#define MINPANANGLE  0
+#define MAXPANANGLE  180
+#define MINTILTANGLE 25
+#define MAXTILTANGLE 75
 
 /*
  * Command Structure:
@@ -33,30 +44,37 @@
 #define ERR_CMD_INVALID        3
 #define ERR_CMD_STRUCT_INVALID 4
 
-char rcvBuffer[MAXRCVSIZE] = {
+uint8_t rcvBuffer[MAXRCVSIZE] = {
   0};
 
 typedef struct cmdMove_t
 {
   uint8_t cmdID;
   uint8_t pad1;
+  uint8_t msgsize;
   uint8_t lspd;
   uint8_t rspd;
   uint8_t pan;
   uint8_t tilt;
   uint8_t pad5;
   uint8_t  csum;
-
 }
 cmdMove_t;
 
+Servo panServo;
+Servo tiltServo;
+
 void setup()
 {
-  Serial.begin(57600);
+  Serial.begin(9600);
   pinMode(LMDIRPIN, OUTPUT);
   pinMode(LMSPDPIN, OUTPUT);
   pinMode(RMDIRPIN, OUTPUT);
   pinMode(RMSPDPIN, OUTPUT);
+  panServo.attach(PANSERVOPIN);
+  tiltServo.attach(TILTSERVOPIN);
+  panServo.write(0);
+  tiltServo.write(50);
 }
 
 void motorChange(int motor, int speed)
@@ -67,12 +85,44 @@ void motorChange(int motor, int speed)
   {
     digitalWrite(LMDIRPIN, direction);
     analogWrite(LMSPDPIN, speed);
+    Serial.print("***");
+    Serial.print(direction, DEC);
+    Serial.print(speed, DEC);
+    Serial.print("***");
   }
   else
   {
     digitalWrite(RMDIRPIN, direction);
     analogWrite(RMSPDPIN, speed);
   }
+}
+
+void servoChange(int pan, int tilt)
+{
+  if(pan < MINPANANGLE)
+  {
+    pan = MINPANANGLE;
+  }
+  else if(pan > MAXPANANGLE)
+  {
+    pan = MAXPANANGLE;
+  }
+
+  if(tilt < MINTILTANGLE)
+  {
+    tilt = MINTILTANGLE;
+  }
+  else if(tilt > MAXTILTANGLE)
+  {
+    tilt = MAXTILTANGLE;
+  }
+  panServo.write(pan);
+  tiltServo.write(tilt);
+  Serial.print("===");
+  Serial.print(pan, DEC);
+  Serial.print(" ");
+  Serial.print(tilt, DEC);
+  Serial.print("===");
 }
 
 void flagError(int status)
@@ -96,16 +146,15 @@ void sendAck(int status)
 
 int verifyCommand(int numBytes)
 {
-  int i = 0, csumtemp = 0;
-  int8_t csum = 0;
+  int i = 0, csum = 0;
   int ret = ERR_SUCCESS;
   Serial.print("CSUM: ");
   for (i = 0 ; i < numBytes - 1; ++i)
   {
-    csumtemp += rcvBuffer[i];
+    csum += rcvBuffer[i];
   }
-  Serial.print(csumtemp, DEC);
-  csum = ~csumtemp & 0xFF;
+  Serial.print(csum);
+  csum = ~csum & 0xFF;
   Serial.print(" ");
   Serial.print(csum);
   Serial.print("||");
@@ -122,8 +171,9 @@ int processMoveCommand(int numBytes)
   int ret = ERR_SUCCESS;
   if(sizeof(cmdMove_t) == numBytes)
   {
-    motorChange(LM, rcvBuffer[2] - 128);
-    motorChange(RM, rcvBuffer[3] - 128);
+    motorChange(LM, rcvBuffer[3] - 128);
+    motorChange(RM, rcvBuffer[4] - 128);
+    servoChange(rcvBuffer[5], rcvBuffer[6]);
   }
   else
   {
@@ -158,24 +208,19 @@ int receiveCommand()
       for(; numBytes > 0; --numBytes)
       {
         rcvBuffer[i] = Serial.read();
-        if('\n' == rcvBuffer[i])
-        {
-          break;
-        } 
         Serial.print(i, DEC);
         Serial.print(" : ");
         Serial.print(rcvBuffer[i], DEC);
         Serial.print("==");
         ++i;
       }
-      if('\n' == rcvBuffer[i])
-      {
-        Serial.print("start ver");
-        break;
-      } 
-      else if (i < MAXRCVSIZE)
+      if (i < MAXRCVSIZE)
       {
         continue;
+      }
+      else if (i == MAXRCVSIZE)
+      {
+        break;
       }
       else
       {
@@ -188,12 +233,10 @@ int receiveCommand()
 
   if(ERR_SUCCESS == ret)
   {
-    Serial.print("ver");
     ret = verifyCommand(i);
   }
   if(ERR_SUCCESS == ret)
   {
-    Serial.print("proc");
     ret = processCommand(i);
   }
 
