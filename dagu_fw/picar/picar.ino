@@ -47,6 +47,8 @@
 uint8_t rcvBuffer[MAXRCVSIZE] = {
   0};
 
+int debug = 0;
+
 typedef struct cmdMove_t
 {
   uint8_t cmdID;
@@ -66,7 +68,7 @@ Servo tiltServo;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(LMDIRPIN, OUTPUT);
   pinMode(LMSPDPIN, OUTPUT);
   pinMode(RMDIRPIN, OUTPUT);
