@@ -1,4 +1,4 @@
-#include "Servo.h"
+#include "ServoTimer2.h"
 
 #define LMDIRPIN 7
 #define LMSPDPIN 9
@@ -17,7 +17,7 @@
 
 
 #define PANSERVOPIN  2
-#define TILTSERVOPIN 3
+#define TILTSERVOPIN 4
 
 #define MINPANANGLE  0
 #define MAXPANANGLE  180
@@ -63,8 +63,8 @@ typedef struct cmdMove_t
 }
 cmdMove_t;
 
-Servo panServo;
-Servo tiltServo;
+ServoTimer2 panServo;
+ServoTimer2 tiltServo;
 
 void setup()
 {
@@ -75,8 +75,8 @@ void setup()
   pinMode(RMSPDPIN, OUTPUT);
   panServo.attach(PANSERVOPIN);
   tiltServo.attach(TILTSERVOPIN);
-  panServo.write(0);
-  tiltServo.write(50);
+  panServo.write(1000);
+  tiltServo.write(1200);
 }
 
 void motorChange(int motor, int speed)
@@ -87,10 +87,13 @@ void motorChange(int motor, int speed)
   {
     digitalWrite(LMDIRPIN, direction);
     analogWrite(LMSPDPIN, speed);
-    Serial.print("***");
-    Serial.print(direction, DEC);
-    Serial.print(speed, DEC);
-    Serial.print("***");
+    if(debug)
+    {
+      Serial.print("***");
+      Serial.print(direction, DEC);
+      Serial.print(speed, DEC);
+      Serial.print("***");
+    }
   }
   else
   {
@@ -118,13 +121,16 @@ void servoChange(int pan, int tilt)
   {
     tilt = MAXTILTANGLE;
   }
-  panServo.write(pan);
-  tiltServo.write(tilt);
-  Serial.print("===");
-  Serial.print(pan, DEC);
-  Serial.print(" ");
-  Serial.print(tilt, DEC);
-  Serial.print("===");
+  panServo.write(map(pan, 0, 180, 0, 2000));
+  tiltServo.write(map(tilt, 0, 180, 0, 2000));
+  if(debug)
+  {
+    Serial.print("===");
+    Serial.print(pan, DEC);
+    Serial.print(" ");
+    Serial.print(tilt, DEC);
+    Serial.print("===");
+  }
 }
 
 void flagError(int status)
@@ -150,19 +156,31 @@ int verifyCommand(int numBytes)
 {
   int i = 0, csum = 0;
   int ret = ERR_SUCCESS;
-  Serial.print("CSUM: ");
+  if(debug)
+  {
+    Serial.print("CSUM: ");
+  }
   for (i = 0 ; i < numBytes - 1; ++i)
   {
     csum += rcvBuffer[i];
   }
-  Serial.print(csum);
+  if(debug)
+  {
+    Serial.print(csum);
+  }
   csum = ~csum & 0xFF;
-  Serial.print(" ");
-  Serial.print(csum);
-  Serial.print("||");
+  if(debug)
+  {
+    Serial.print(" ");
+    Serial.print(csum);
+    Serial.print("||");
+  }
   if(csum != rcvBuffer[numBytes - 1])
   {
-    Serial.print(csum, DEC);
+    if(debug)
+    {
+      Serial.print(csum, DEC);
+    }
     ret = ERR_CMD_VERIF_FAILED;
   }
   return ret;
@@ -210,10 +228,13 @@ int receiveCommand()
       for(; numBytes > 0; --numBytes)
       {
         rcvBuffer[i] = Serial.read();
-        Serial.print(i, DEC);
-        Serial.print(" : ");
-        Serial.print(rcvBuffer[i], DEC);
-        Serial.print("==");
+        if(debug)
+        {
+          Serial.print(i, DEC);
+          Serial.print(" : ");
+          Serial.print(rcvBuffer[i], DEC);
+          Serial.print("==");
+        }
         ++i;
       }
       if (i < MAXRCVSIZE)
@@ -249,6 +270,9 @@ void loop()
 {
   sendAck(receiveCommand());
 }
+
+
+
 
 
 
