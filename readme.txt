@@ -17,7 +17,7 @@ Features:
 - Can control motion as well as camera pan/tilt from browser using virtual joysticks (Requires multitouch to do pan/tilt as second joystick is needed for this)
 - Streams back video from car camera to the browser
 - Can have multiple connections to the car (not recommended for controlling)
-- 
+- Uses websockets for control and response is almost instantaneous like regular toy cars.
 
 How to:
 - Setup the HW and SW (detailed in the blog)
