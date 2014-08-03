@@ -35,7 +35,7 @@ def updateBot(lspeed, rspeed, pan, tilt):
   cmd = cmd + ' ' + chr(csum)
   ser.write(cmd)
   msg = ser.readline()
-  #print msg
+  print msg
 
 def normalizeSpeed(speed):
   if(speed < -255):
@@ -69,8 +69,8 @@ def calculateTilt(tilt):
 def processMessage(data):
   data = data.split()
   data = map(int, data)
-  data[0] = data[0] * 3 #should be 5 but limiting speed for now
-  data[1] = data[1] * 3
+  data[0] = data[0] * 5
+  data[1] = data[1] * 5
   speed = math.sqrt(math.pow(data[0], 2) + math.pow(data[1], 2))
   if((data[0] == 0) and (last_data[0] == 0) and  (data[1] == 0) and (last_data[1] == 0) and (data[2] == 0) and (last_data[2] == 0) and (data[3] == 0) and (last_data[3] == 0)):
     return
@@ -99,7 +99,7 @@ def processMessage(data):
   pan = calculatePan(data[2])
   tilt = calculateTilt(data[3])
 
-  #print 'Data: %d %d' %(pan, tilt)
+  print 'Data: %d %d' %(pan, tilt)
   updateBot(lspeed, rspeed, pan, tilt)
 
 class SimpleEcho(WebSocket):
