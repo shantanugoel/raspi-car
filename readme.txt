@@ -1,5 +1,5 @@
 This is the software portion of my project to make a browser controlled remote car.
-Read this for more details: <blog post link to be added> 
+Read this for more details: http://tech.shantanugoel.com/2014/08/03/browser-controlled-raspberry-pi-camera-car.html
 
 HW Used:
 Dagu Chassis (Includes motors/tires and the plates)
